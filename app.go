@@ -414,6 +414,7 @@ func Start() {
 		remoteService,
 		app.messageEncoder,
 		app.metricsReporters,
+		app.router,
 	)
 
 	periodicMetrics()

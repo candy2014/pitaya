@@ -25,6 +25,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/nats-io/nuid"
+	"github.com/topfreegames/pitaya/router"
+	"strconv"
 	"strings"
 	"time"
 
@@ -71,6 +73,7 @@ type (
 		services           map[string]*component.Service // all registered service
 		messageEncoder     message.Encoder
 		metricsReporters   []metrics.Reporter
+		router             *router.Router
 	}
 
 	unhandledMessage struct {
@@ -95,6 +98,7 @@ func NewHandlerService(
 	remoteService *RemoteService,
 	messageEncoder message.Encoder,
 	metricsReporters []metrics.Reporter,
+	router *router.Router,
 ) *HandlerService {
 	h := &HandlerService{
 		services:           make(map[string]*component.Service),
@@ -110,6 +114,7 @@ func NewHandlerService(
 		remoteService:      remoteService,
 		messageEncoder:     messageEncoder,
 		metricsReporters:   metricsReporters,
+		router:             router,
 	}
 
 	return h
@@ -276,8 +281,14 @@ func (h *HandlerService) processMessage(a *agent.Agent, msg *message.Message) {
 	}
 	ctx = tracing.StartSpan(ctx, msg.Route, tags)
 	ctx = context.WithValue(ctx, constants.SessionCtxKey, a.Session)
+	cmd, err := strconv.Atoi(msg.Route)
 
-	r, err := route.Decode(msg.Route)
+	if err != nil {
+		logger.Log.Errorf("Failed to decode route: %s", err.Error())
+		a.AnswerWithError(ctx, msg.ID, e.NewError(err, e.ErrBadRequestCode))
+		return
+	}
+	r, err := h.router.GetLogicRoute(cmd)
 	if err != nil {
 		logger.Log.Errorf("Failed to decode route: %s", err.Error())
 		a.AnswerWithError(ctx, msg.ID, e.NewError(err, e.ErrBadRequestCode))

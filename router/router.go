@@ -22,6 +22,7 @@ package router
 
 import (
 	"context"
+	"errors"
 	"math/rand"
 	"time"
 
@@ -37,6 +38,7 @@ import (
 type Router struct {
 	serviceDiscovery cluster.ServiceDiscovery
 	routesMap        map[string]RoutingFunc
+	routesCahce      map[int]*route.Route //local route
 }
 
 // RoutingFunc defines a routing function
@@ -50,7 +52,8 @@ type RoutingFunc func(
 // New returns the router
 func New() *Router {
 	return &Router{
-		routesMap: make(map[string]RoutingFunc),
+		routesMap:   make(map[string]RoutingFunc),
+		routesCahce: make(map[int]*route.Route),
 	}
 }
 
@@ -109,4 +112,24 @@ func (r *Router) AddRoute(
 		logger.Log.Warnf("overriding the route to svType %s", serverType)
 	}
 	r.routesMap[serverType] = routingFunction
+}
+
+func (r *Router) AddLogicRoute(cmd int, svType, service, method string) {
+
+	if r.routesCahce != nil {
+		if _, ok := r.routesCahce[cmd]; !ok {
+			r.routesCahce[cmd] = route.NewRoute(svType, service, method)
+		} else {
+			logger.Log.Warnf("add logic route is exist %s,%s,%s", svType, service, method)
+		}
+	}
+}
+
+func (r *Router) GetLogicRoute(cmd int) (*route.Route, error) {
+	if r.routesCahce != nil {
+		if rc, ok := r.routesCahce[cmd]; ok {
+			return rc, nil
+		}
+	}
+	return nil, errors.New("lgoic route is not eixst")
 }
