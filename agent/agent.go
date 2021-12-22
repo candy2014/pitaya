@@ -252,7 +252,9 @@ func (a *Agent) ResponseMID(ctx context.Context, mid uint, v interface{}, isErro
 			a.Session.ID(), a.Session.UID(), mid, v)
 	}
 
-	return a.send(pendingMessage{ctx: ctx, typ: message.Response, mid: mid, payload: v, err: err})
+	hash := ctx.Value(constants.PropagateCtxKey)
+	route := hash.(map[string]interface{})[constants.RouteKey]
+	return a.send(pendingMessage{ctx: ctx, typ: message.Response, mid: mid, payload: v, err: err, route: route.(string)})
 }
 
 // Close closes the agent, cleans inner state and closes low-level connection.

@@ -248,12 +248,12 @@ func (h *HandlerService) processPacket(a *agent.Agent, p *packet.Packet) error {
 		logger.Log.Debugf("Receive handshake ACK Id=%d, Remote=%s", a.Session.ID(), a.RemoteAddr())
 
 	case packet.Data:
-		if a.GetStatus() < constants.StatusWorking {
-			return fmt.Errorf("receive data on socket which is not yet ACK, session will be closed immediately, remote=%s",
-				a.RemoteAddr().String())
-		}
+		//if a.GetStatus() < constants.StatusWorking {
+		//	return fmt.Errorf("receive data on socket which is not yet ACK, session will be closed immediately, remote=%s",
+		//		a.RemoteAddr().String())
+		//}
 
-		msg, err := message.Decode(p.Data)
+		msg, err := message.DecodePaperTiger(p.Data)
 		if err != nil {
 			return err
 		}

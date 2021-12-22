@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"github.com/topfreegames/pitaya"
 
 	"github.com/topfreegames/pitaya/component"
 )
@@ -16,7 +17,30 @@ func NewRoom() *Room {
 	return &Room{}
 }
 
+type LoginRequest struct {
+	Account  string
+	ServerId int32
+}
+
+type LoginResponse struct {
+	Account  string
+	ServerId int32
+}
+
 // Ping returns a pong
 func (r *Room) Ping(ctx context.Context) ([]byte, error) {
 	return []byte("pong"), nil
+}
+
+// Login returns a pong
+func (r *Room) Login(ctx context.Context, request *LoginRequest) (*LoginResponse, error) {
+	resp := &LoginResponse{
+		Account:  "hello world",
+		ServerId: request.ServerId,
+	}
+	return resp, nil
+}
+
+func (r *Room) Init() {
+	pitaya.AddLogicRoute(100, "room", "room", "login")
 }

@@ -1,7 +1,9 @@
 package message
 
 import (
-	"github.com/topfreegames/pitaya/conn/codec"
+	"bytes"
+	"encoding/binary"
+	"fmt"
 	"strconv"
 )
 
@@ -21,21 +23,38 @@ func (pme *PapertigerMessageEncoder) IsCompressionEnabled() bool {
 }
 
 func (pme *PapertigerMessageEncoder) Encode(message *Message) ([]byte, error) {
-
-	return nil, nil
+	bytes.NewBuffer(make([]byte, 1024))
+	cmd, _ := strconv.Atoi(message.Route)
+	data := message.Data
+	length := 7 + len(data)
+	sendData := make([]byte, length)
+	// int8
+	sendData[0] = 101
+	binary.LittleEndian.PutUint32(sendData[1:], uint32(cmd))
+	sendData[length-2] = 0xEE
+	sendData[length-1] = 0xEE
+	copy(sendData[5:], data)
+	return sendData, nil
 }
 
-// Decode decodes the message
-func (pme *PapertigerMessageEncoder) Decode(data []byte) (*Message, error) {
+// DecodePaperTiger decodes the message
+func DecodePaperTiger(data []byte) (*Message, error) {
 	if len(data) < 4 {
 		return nil, ErrInvalidMessage
 	}
-	cmdId := codec.BytesToInt(data[0:4])
+	offset := 0
+	cmdId := binary.LittleEndian.Uint16(data)
+	offset += 2
 	m := New()
 	m.Type = Request
-	m.ID = 0
-	route := strconv.Itoa(cmdId)
+	m.ID = 1
+	route := strconv.Itoa(int(cmdId))
 	m.Route = route
 	m.Data = data[4:]
 	return m, nil
+}
+
+func DecodeData(data []byte) {
+	cmdId := binary.LittleEndian.Uint32(data)
+	fmt.Println("cmd=", cmdId)
 }

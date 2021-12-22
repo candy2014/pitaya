@@ -134,7 +134,8 @@ func Configure(
 	app.server.Type = serverType
 	app.serverMode = serverMode
 	app.server.Metadata = serverMetadata
-	app.messageEncoder = message.NewMessagesEncoder(app.config.GetBool("pitaya.handler.messages.compression"))
+	//app.messageEncoder = message.NewMessagesEncoder(app.config.GetBool("pitaya.handler.messages.compression"))
+	app.messageEncoder = message.NewPapertigerMessageEncoder(app.config.GetBool("pitaya.handler.messages.compression"))
 	configureMetrics(serverType)
 	configureDefaultPipelines(app.config)
 	app.configured = true
@@ -505,6 +506,10 @@ func AddRoute(
 		return constants.ErrRouterNotInitialized
 	}
 	return nil
+}
+
+func AddLogicRoute(cmd int, svType, service, method string) {
+	app.router.AddLogicRoute(cmd, svType, service, method)
 }
 
 // Shutdown send a signal to let 'pitaya' shutdown itself.

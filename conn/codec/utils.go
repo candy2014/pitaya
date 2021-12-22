@@ -7,15 +7,15 @@ func PaperTigerParseHeader(header []byte) (int, packet.Type, error) {
 	if len(header) != HeadLength {
 		return 0, 0x00, packet.ErrInvalidPomeloHeader
 	}
-	typ := header[0]
-	if typ < packet.Handshake || typ > packet.Kick {
-		return 0, 0x00, packet.ErrWrongPomeloPacketType
-	}
-
-	size := BytesToInt(header[1:])
+	size := BytesToInt(header[0:3])
 
 	if size > MaxPacketSize {
 		return 0, 0x00, ErrPacketSizeExcced
+	}
+
+	typ := header[3]
+	if typ < packet.Handshake || typ > packet.Kick {
+		return 0, 0x00, packet.ErrWrongPomeloPacketType
 	}
 
 	return size, packet.Type(typ), nil
