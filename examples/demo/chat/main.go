@@ -127,8 +127,7 @@ func main() {
 	http.Handle("/web/", http.StripPrefix("/web/", http.FileServer(http.Dir("web"))))
 
 	go http.ListenAndServe(":3251", nil)
-
-	t := acceptor.NewWSAcceptor(":3250")
+	t := acceptor.NewTCPAcceptor("72.20.10.106:3251")
 	pitaya.AddAcceptor(t)
 
 	pitaya.Configure(true, "chat", pitaya.Cluster, map[string]string{}, conf)

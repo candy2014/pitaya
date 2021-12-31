@@ -40,11 +40,12 @@ type Route struct {
 	SvType  string
 	Service string
 	Method  string
+	MsgType int8 // 1-请求并且会有数据改变 2-通知并且有数据改变 3-请求不改变数据 4-通知不改变数据 5-push
 }
 
 // NewRoute creates a new route
-func NewRoute(server, service, method string) *Route {
-	return &Route{server, service, method}
+func NewRoute(server, service, method string, msgType int8) *Route {
+	return &Route{server, service, method, msgType}
 }
 
 // String transforms the route into a string
@@ -70,9 +71,9 @@ func Decode(route string) (*Route, error) {
 	}
 	switch len(r) {
 	case 3:
-		return NewRoute(r[0], r[1], r[2]), nil
+		return NewRoute(r[0], r[1], r[2], 0), nil
 	case 2:
-		return NewRoute("", r[0], r[1]), nil
+		return NewRoute("", r[0], r[1], 0), nil
 	default:
 		logger.Log.Errorf("invalid route: " + route)
 		return nil, ErrInvalidRoute

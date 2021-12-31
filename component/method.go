@@ -31,11 +31,10 @@ import (
 )
 
 var (
-	typeOfError         = reflect.TypeOf((*error)(nil)).Elem()
-	typeOfBytes         = reflect.TypeOf(([]byte)(nil))
-	typeOfContext       = reflect.TypeOf(new(context.Context)).Elem()
-	typeOfProtoMsg      = reflect.TypeOf(new(proto.Message)).Elem()
-	typeOfPaperTigerMsg = reflect.TypeOf(new(message.PapererProto)).Elem()
+	typeOfError    = reflect.TypeOf((*error)(nil)).Elem()
+	typeOfBytes    = reflect.TypeOf(([]byte)(nil))
+	typeOfContext  = reflect.TypeOf(new(context.Context)).Elem()
+	typeOfProtoMsg = reflect.TypeOf(new(proto.Message)).Elem()
 )
 
 func isExported(name string) bool {
@@ -61,7 +60,7 @@ func isRemoteMethod(method reflect.Method) bool {
 	}
 
 	if mt.NumIn() == 3 {
-		if t2 := mt.In(2); !t2.Implements(typeOfPaperTigerMsg) {
+		if t2 := mt.In(2); !t2.Implements(typeOfProtoMsg) {
 			return false
 		}
 	}

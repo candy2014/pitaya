@@ -46,11 +46,10 @@ func DecodePaperTiger(data []byte) (*Message, error) {
 	cmdId := binary.LittleEndian.Uint16(data)
 	offset += 2
 	m := New()
-	m.Type = Request
 	m.ID = 1
 	route := strconv.Itoa(int(cmdId))
 	m.Route = route
-	m.Data = data[4:]
+	m.Data = data[offset:]
 	return m, nil
 }
 

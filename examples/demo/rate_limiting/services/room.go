@@ -42,5 +42,5 @@ func (r *Room) Login(ctx context.Context, request *LoginRequest) (*LoginResponse
 }
 
 func (r *Room) Init() {
-	pitaya.AddLogicRoute(100, "room", "room", "login")
+	pitaya.AddLogicRoute(1, "room", "room", "login", 1)
 }

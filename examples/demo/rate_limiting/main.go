@@ -3,6 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/topfreegames/pitaya/conn/message"
+	"github.com/topfreegames/pitaya/serialize/papertiger"
 	"time"
 
 	"strings"
@@ -14,7 +16,6 @@ import (
 	"github.com/topfreegames/pitaya/component"
 	"github.com/topfreegames/pitaya/config"
 	"github.com/topfreegames/pitaya/examples/demo/rate_limiting/services"
-	"github.com/topfreegames/pitaya/serialize/json"
 )
 
 func configureFrontend(port int) {
@@ -35,6 +36,7 @@ func configureFrontend(port int) {
 		tcp,
 		acceptorwrapper.NewRateLimitingWrapper(pConfig))
 	pitaya.AddAcceptor(wrapped)
+
 }
 
 func main() {
@@ -44,10 +46,12 @@ func main() {
 	svType := "room"
 
 	flag.Parse()
-
-	pitaya.SetSerializer(json.NewSerializer())
 	configureFrontend(*port)
 
 	pitaya.Configure(true, svType, pitaya.Cluster, map[string]string{})
+	pitaya.SetSerializer(papertiger.NewPaperTigerBinary())
+	pitaya.SetPacketDecoder(NewPaperTigerPacketDecoder())
+	pitaya.SetPacketEncoder(NewPaperTigerPacketEncoder())
+	pitaya.SetMessageEncoder(message.NewForwardMessageEncoder(false))
 	pitaya.Start()
 }

@@ -134,8 +134,7 @@ func Configure(
 	app.server.Type = serverType
 	app.serverMode = serverMode
 	app.server.Metadata = serverMetadata
-	//app.messageEncoder = message.NewMessagesEncoder(app.config.GetBool("pitaya.handler.messages.compression"))
-	app.messageEncoder = message.NewPapertigerMessageEncoder(app.config.GetBool("pitaya.handler.messages.compression"))
+	app.messageEncoder = message.NewMessagesEncoder(app.config.GetBool("pitaya.handler.messages.compression"))
 	configureMetrics(serverType)
 	configureDefaultPipelines(app.config)
 	app.configured = true
@@ -256,6 +255,14 @@ func SetServiceDiscoveryClient(s cluster.ServiceDiscovery) {
 // and UnMarshal handler payload
 func SetSerializer(seri serialize.Serializer) {
 	app.serializer = seri
+}
+
+func SetMessageEncoder(encoder message.Encoder) {
+	app.messageEncoder = encoder
+}
+
+func GetMessageEncoder() message.Encoder {
+	return app.messageEncoder
 }
 
 // GetSerializer gets the app serializer
@@ -508,8 +515,8 @@ func AddRoute(
 	return nil
 }
 
-func AddLogicRoute(cmd int, svType, service, method string) {
-	app.router.AddLogicRoute(cmd, svType, service, method)
+func AddLogicRoute(cmd int, svType, service, method string, msgType int8) {
+	app.router.AddLogicRoute(cmd, svType, service, method, msgType)
 }
 
 // Shutdown send a signal to let 'pitaya' shutdown itself.

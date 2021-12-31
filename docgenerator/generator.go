@@ -50,7 +50,7 @@ func HandlersDocs(serverType string, services map[string]*component.Service, get
 
 	for serviceName, service := range services {
 		for name, handler := range service.Handlers {
-			routeName := route.NewRoute(serverType, serviceName, name)
+			routeName := route.NewRoute(serverType, serviceName, name, 0)
 			docs.Handlers[routeName.String()] = docForMethod(handler.Method, getPtrNames)
 		}
 	}
@@ -66,7 +66,7 @@ func RemotesDocs(serverType string, services map[string]*component.Service, getP
 
 	for serviceName, service := range services {
 		for name, remote := range service.Remotes {
-			routeName := route.NewRoute(serverType, serviceName, name)
+			routeName := route.NewRoute(serverType, serviceName, name, 0)
 			docs.Remotes[routeName.String()] = docForMethod(remote.Method, getPtrNames)
 		}
 	}

@@ -253,7 +253,7 @@ func (h *HandlerService) processPacket(a *agent.Agent, p *packet.Packet) error {
 		//		a.RemoteAddr().String())
 		//}
 
-		msg, err := message.DecodePaperTiger(p.Data)
+		msg, err := message.ForwardDecode(p.Data)
 		if err != nil {
 			return err
 		}
@@ -289,6 +289,14 @@ func (h *HandlerService) processMessage(a *agent.Agent, msg *message.Message) {
 		return
 	}
 	r, err := h.router.GetLogicRoute(cmd)
+	msgType := r.MsgType
+
+	if msgType == 1 || msgType == 3 {
+		msg.Type = message.Request
+	} else if msgType == 2 || msgType == 4 {
+		msg.Type = message.Notify
+	}
+
 	if err != nil {
 		logger.Log.Errorf("Failed to decode route: %s", err.Error())
 		a.AnswerWithError(ctx, msg.ID, e.NewError(err, e.ErrBadRequestCode))
