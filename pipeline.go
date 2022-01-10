@@ -33,3 +33,11 @@ func BeforeHandler(h pipeline.HandlerTempl) {
 func AfterHandler(h pipeline.AfterHandlerTempl) {
 	pipeline.AfterHandler.PushBack(h)
 }
+
+func BeforeFilterHandler(f pipeline.FilterHandler) {
+	pipeline.BeforeFilterHandler.PushBack(f)
+}
+
+func AfterFilterHandler(h pipeline.FilterAfterHandler) {
+	pipeline.AfterFilterHandler.PushBack(h)
+}

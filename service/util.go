@@ -24,6 +24,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/topfreegames/pitaya/agent"
 	"reflect"
 
 	"github.com/golang/protobuf/proto"
@@ -119,6 +120,34 @@ func executeAfterPipeline(ctx context.Context, res interface{}, err error) (inte
 		}
 	}
 	return ret, err
+}
+
+func executeBeforeFilters(ctx context.Context, agent *agent.Agent, message *message.Message) error {
+	if len(pipeline.BeforeFilterHandler.Filters) > 0 {
+		var err error
+		for _, h := range pipeline.BeforeFilterHandler.Filters {
+			err = h(ctx, agent, message)
+			if err != nil {
+				logger.Log.Debugf("pitaya/handler: broken filter: %s", err.Error())
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func executeAfterFilters(ctx context.Context, agent *agent.Agent, message *message.Message) error {
+	if len(pipeline.AfterFilterHandler.Filters) > 0 {
+		var err error
+		for _, h := range pipeline.AfterFilterHandler.Filters {
+			err = h(ctx, agent, message)
+			if err != nil {
+				logger.Log.Debugf("pitaya/handler: broken filter: %s", err.Error())
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func serializeReturn(ser serialize.Serializer, ret interface{}) ([]byte, error) {

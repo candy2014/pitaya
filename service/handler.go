@@ -131,10 +131,12 @@ func (h *HandlerService) Dispatch(thread int) {
 		case lm := <-h.chLocalProcess:
 			metrics.ReportMessageProcessDelayFromCtx(lm.ctx, h.metricsReporters, "local")
 			h.localProcess(lm.ctx, lm.agent, lm.route, lm.msg)
+			executeAfterFilters(context.Background(), lm.agent, lm.msg)
 
 		case rm := <-h.chRemoteProcess:
 			metrics.ReportMessageProcessDelayFromCtx(rm.ctx, h.metricsReporters, "remote")
 			h.remoteService.remoteProcess(rm.ctx, nil, rm.agent, rm.route, rm.msg)
+			executeAfterFilters(context.Background(), rm.agent, rm.msg)
 
 		case <-timer.GlobalTicker.C: // execute cron task
 			timer.Cron()
@@ -248,17 +250,22 @@ func (h *HandlerService) processPacket(a *agent.Agent, p *packet.Packet) error {
 		logger.Log.Debugf("Receive handshake ACK Id=%d, Remote=%s", a.Session.ID(), a.RemoteAddr())
 
 	case packet.Data:
-		//if a.GetStatus() < constants.StatusWorking {
-		//	return fmt.Errorf("receive data on socket which is not yet ACK, session will be closed immediately, remote=%s",
-		//		a.RemoteAddr().String())
-		//}
+		if a.GetStatus() < constants.StatusWorking {
+			return fmt.Errorf("receive data on socket which is not yet ACK, session will be closed immediately, remote=%s",
+				a.RemoteAddr().String())
+		}
 
 		msg, err := message.ForwardDecode(p.Data)
 		if err != nil {
 			return err
 		}
-		h.processMessage(a, msg)
+		err = executeBeforeFilters(context.Background(), a, msg)
 
+		if err != nil {
+			return err
+		}
+
+		h.processMessage(a, msg)
 	case packet.Heartbeat:
 		// expected
 	}
@@ -288,7 +295,14 @@ func (h *HandlerService) processMessage(a *agent.Agent, msg *message.Message) {
 		a.AnswerWithError(ctx, msg.ID, e.NewError(err, e.ErrBadRequestCode))
 		return
 	}
-	r, err := h.router.GetLogicRoute(cmd)
+	var r *route.Route
+	var routeError error
+
+	if r, routeError = h.router.GetLogicRoute(cmd); routeError != nil {
+		logger.Log.Errorf("Failed to decode route: %s", routeError.Error())
+		a.AnswerWithError(ctx, msg.ID, e.NewError(routeError, e.ErrBadRequestCode))
+		return
+	}
 	msgType := r.MsgType
 
 	if msgType == 1 || msgType == 3 {

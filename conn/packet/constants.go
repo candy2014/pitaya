@@ -40,7 +40,7 @@ const (
 	Data = 0x04
 
 	// Kick represents a kick off packet
-	Kick = 0x10 // disconnect message from server
+	Kick = 0x05 // disconnect message from server
 )
 
 // ErrWrongPomeloPacketType represents a wrong packet type.

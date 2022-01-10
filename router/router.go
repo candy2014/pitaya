@@ -131,5 +131,5 @@ func (r *Router) GetLogicRoute(cmd int) (*route.Route, error) {
 			return rc, nil
 		}
 	}
-	return nil, errors.New("lgoic route is not eixst")
+	return nil, errors.New("logic route is not eixst")
 }
