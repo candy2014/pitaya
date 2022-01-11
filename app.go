@@ -22,6 +22,7 @@ package pitaya
 
 import (
 	"context"
+	"github.com/topfreegames/pitaya/route"
 	"os"
 	"os/signal"
 	"reflect"
@@ -517,6 +518,10 @@ func AddRoute(
 
 func AddLogicRoute(cmd int, svType, service, method string, msgType int8) {
 	app.router.AddLogicRoute(cmd, svType, service, method, msgType)
+}
+
+func GetLogicRoute(cmd int) (*route.Route, error) {
+	return app.router.GetLogicRoute(cmd)
 }
 
 // Shutdown send a signal to let 'pitaya' shutdown itself.
