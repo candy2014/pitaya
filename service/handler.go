@@ -60,11 +60,11 @@ var (
 type (
 	// HandlerService service
 	HandlerService struct {
-		appDieChan         chan bool             // die channel app
-		chLocalProcess     chan unhandledMessage // channel of messages that will be processed locally
-		chRemoteProcess    chan unhandledMessage // channel of messages that will be processed remotely
-		decoder            codec.PacketDecoder   // binary decoder
-		encoder            codec.PacketEncoder   // binary encoder
+		appDieChan         chan bool               // die channel app
+		chLocalProcess     []chan unhandledMessage // channel of messages that will be processed locally
+		chRemoteProcess    []chan unhandledMessage // channel of messages that will be processed remotely
+		decoder            codec.PacketDecoder     // binary decoder
+		encoder            codec.PacketEncoder     // binary encoder
 		heartbeatTimeout   time.Duration
 		messagesBufferSize int
 		remoteService      *RemoteService
@@ -74,6 +74,7 @@ type (
 		messageEncoder     message.Encoder
 		metricsReporters   []metrics.Reporter
 		router             *router.Router
+		dispatchThreadNum  int64
 	}
 
 	unhandledMessage struct {
@@ -99,11 +100,23 @@ func NewHandlerService(
 	messageEncoder message.Encoder,
 	metricsReporters []metrics.Reporter,
 	router *router.Router,
+	dispatchThreadNum int,
 ) *HandlerService {
+
+	chLocals := make([]chan unhandledMessage, dispatchThreadNum)
+	for i := 0; i < dispatchThreadNum; i++ {
+		chLocals[i] = make(chan unhandledMessage, localProcessBufferSize)
+	}
+
+	chRemotes := make([]chan unhandledMessage, dispatchThreadNum)
+	for i := 0; i < dispatchThreadNum; i++ {
+		chRemotes[i] = make(chan unhandledMessage, remoteProcessBufferSize)
+	}
+
 	h := &HandlerService{
 		services:           make(map[string]*component.Service),
-		chLocalProcess:     make(chan unhandledMessage, localProcessBufferSize),
-		chRemoteProcess:    make(chan unhandledMessage, remoteProcessBufferSize),
+		chLocalProcess:     chLocals,
+		chRemoteProcess:    chRemotes,
 		decoder:            packetDecoder,
 		encoder:            packetEncoder,
 		messagesBufferSize: messagesBufferSize,
@@ -115,6 +128,7 @@ func NewHandlerService(
 		messageEncoder:     messageEncoder,
 		metricsReporters:   metricsReporters,
 		router:             router,
+		dispatchThreadNum:  int64(dispatchThreadNum),
 	}
 
 	return h
@@ -128,12 +142,12 @@ func (h *HandlerService) Dispatch(thread int) {
 	for {
 		// Calls to remote servers block calls to local server
 		select {
-		case lm := <-h.chLocalProcess:
+		case lm := <-h.chLocalProcess[thread]:
 			metrics.ReportMessageProcessDelayFromCtx(lm.ctx, h.metricsReporters, "local")
 			h.localProcess(lm.ctx, lm.agent, lm.route, lm.msg)
 			executeAfterFilters(context.Background(), lm.agent, lm.msg)
 
-		case rm := <-h.chRemoteProcess:
+		case rm := <-h.chRemoteProcess[thread]:
 			metrics.ReportMessageProcessDelayFromCtx(rm.ctx, h.metricsReporters, "remote")
 			h.remoteService.remoteProcess(rm.ctx, nil, rm.agent, rm.route, rm.msg)
 			executeAfterFilters(context.Background(), rm.agent, rm.msg)
@@ -323,11 +337,12 @@ func (h *HandlerService) processMessage(a *agent.Agent, msg *message.Message) {
 		route: r,
 		msg:   msg,
 	}
+	thread := a.Session.ID() % h.dispatchThreadNum
 	if r.SvType == h.server.Type {
-		h.chLocalProcess <- message
+		h.chLocalProcess[thread] <- message
 	} else {
 		if h.remoteService != nil {
-			h.chRemoteProcess <- message
+			h.chRemoteProcess[thread] <- message
 		} else {
 			logger.Log.Warnf("request made to another server type but no remoteService running")
 		}

@@ -424,6 +424,7 @@ func Start() {
 		app.messageEncoder,
 		app.metricsReporters,
 		app.router,
+		app.config.GetInt("pitaya.concurrency.handler.dispatch"),
 	)
 
 	periodicMetrics()
