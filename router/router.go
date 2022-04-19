@@ -115,13 +115,11 @@ func (r *Router) AddRoute(
 }
 
 func (r *Router) AddLogicRoute(cmd int, svType, service, method string, msgType int8) {
-
 	if r.routesCahce != nil {
-		if _, ok := r.routesCahce[cmd]; !ok {
-			r.routesCahce[cmd] = route.NewRoute(svType, service, method, msgType)
-		} else {
-			logger.Log.Warnf("add logic route is exist %s,%s,%s", svType, service, method)
+		if _, ok := r.routesCahce[cmd]; ok {
+			logger.Log.Warnf("overriding logic route is exist %s,%s,%s", svType, service, method)
 		}
+		r.routesCahce[cmd] = route.NewRoute(svType, service, method, msgType)
 	}
 }
 
