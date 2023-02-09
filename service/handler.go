@@ -236,10 +236,10 @@ func (h *HandlerService) processPacket(a *agent.Agent, p *packet.Packet) error {
 	switch p.Type {
 	case packet.Handshake:
 		logger.Log.Debug("Received handshake packet")
-		if err := a.SendHandshakeResponse(); err != nil {
-			logger.Log.Errorf("Error sending handshake response: %s", err.Error())
-			return err
-		}
+		//if err := a.SendHandshakeResponse(); err != nil {
+		//	logger.Log.Errorf("Error sending handshake response: %s", err.Error())
+		//	return err
+		//}
 		logger.Log.Debugf("Session handshake Id=%d, Remote=%s", a.Session.ID(), a.RemoteAddr())
 
 		// Parse the json sent with the handshake by the client
