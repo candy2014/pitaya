@@ -226,6 +226,10 @@ func (gs *GRPCClient) SendPush(userID string, frontendSv *Server, push *protos.P
 	return constants.ErrNoConnectionToServer
 }
 
+func (gs *GRPCClient) BroadcastPush(frontendSv *Server, push *protos.Push) error {
+	return nil
+}
+
 // AddServer is called when a new server is discovered
 func (gs *GRPCClient) AddServer(sv *Server) {
 	var host, port, portKey string

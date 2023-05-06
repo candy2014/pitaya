@@ -151,6 +151,10 @@ func (m *MockPitayaServer) PushToUser(arg0 context.Context, arg1 *protos.Push) (
 	return ret0, ret1
 }
 
+func (m *MockPitayaServer) BroadcastToUser(context.Context, **protos.Push) (**protos.Response, error) {
+	return nil, nil
+}
+
 // PushToUser indicates an expected call of PushToUser
 func (mr *MockPitayaServerMockRecorder) PushToUser(arg0, arg1 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PushToUser", reflect.TypeOf((*MockPitayaServer)(nil).PushToUser), arg0, arg1)

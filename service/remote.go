@@ -182,6 +182,14 @@ func (r *RemoteService) PushToUser(ctx context.Context, push *protos.Push) (*pro
 	return nil, constants.ErrSessionNotFound
 }
 
+func (r *RemoteService) BroadcastToUser(ctx context.Context, push *protos.Push) (*protos.Response, error) {
+	logger.Log.Debugf("sending push to user %s: %v", push.GetUid(), string(push.Data))
+	session.Broadcast(push.Route, push.Data, push.Uid)
+	return &protos.Response{
+		Data: []byte("ack"),
+	}, nil
+}
+
 // KickUser sends a kick to user
 func (r *RemoteService) KickUser(ctx context.Context, kick *protos.KickMsg) (*protos.KickAnswer, error) {
 	logger.Log.Debugf("sending kick to user %s", kick.GetUserId())

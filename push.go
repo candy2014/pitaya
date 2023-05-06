@@ -29,6 +29,23 @@ import (
 	"github.com/topfreegames/pitaya/util"
 )
 
+func BroadcastPushToUsers(groupName string, v interface{}, frontendType string, debarUid string) error {
+	data, err := util.SerializeOrRaw(app.serializer, v)
+	if err != nil {
+		return err
+	}
+	push := &protos.Push{
+		Route: groupName,
+		Uid:   debarUid,
+		Data:  data,
+	}
+
+	if err = app.rpcClient.BroadcastPush(&cluster.Server{Type: frontendType}, push); err != nil {
+		logger.Log.Errorf("RPCClient send message error, UID=%s, SvType=%s, Error=%s", groupName, frontendType, err.Error())
+	}
+	return err
+}
+
 // SendPushToUsers sends a message to the given list of users
 func SendPushToUsers(route string, v interface{}, uids []string, frontendType string) ([]string, error) {
 	data, err := util.SerializeOrRaw(app.serializer, v)

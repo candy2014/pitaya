@@ -294,7 +294,7 @@ func TestNatsRPCClientBuildRequest(t *testing.T) {
 	sv := getServer()
 	rpcClient, _ := NewNatsRPCClient(config, sv, nil, nil)
 
-	rt := route.NewRoute("sv", "svc", "method")
+	rt := route.NewRoute("sv", "svc", "method", 1)
 	ss := session.New(nil, true, "uid")
 	data := []byte("data")
 	id := uint(123)
@@ -410,7 +410,7 @@ func TestNatsRPCClientCall(t *testing.T) {
 	rpcClient, _ := NewNatsRPCClient(config, sv, nil, nil)
 	rpcClient.Init()
 
-	rt := route.NewRoute("sv", "svc", "method")
+	rt := route.NewRoute("sv", "svc", "method", 1)
 	ss := session.New(nil, true, "uid")
 
 	msg := &message.Message{
@@ -458,9 +458,9 @@ func TestNatsRPCClientCall(t *testing.T) {
 			time.Sleep(50 * time.Millisecond)
 			res, err := rpcClient.Call(context.Background(), protos.RPCType_Sys, rt, ss, msg, sv2)
 			assert.Equal(t, table.expected, res)
-                        if err != nil {
-			  assert.Contains(t, err.Error(), table.err.Error())
-                        }
+			if err != nil {
+				assert.Contains(t, err.Error(), table.err.Error())
+			}
 			err = subs.Unsubscribe()
 			assert.NoError(t, err)
 			conn.Close()

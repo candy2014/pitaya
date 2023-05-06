@@ -84,7 +84,7 @@ var GRPCHostKey = "grpcHost"
 // GRPCExternalHostKey is the key for grpc external host on server metadata
 var GRPCExternalHostKey = "grpc-external-host"
 
-// GRPCPortKey is the key for grpc port on server metadata
+// GRPCPortKey is the key for grpc port on server metadvata
 var GRPCPortKey = "grpcPort"
 
 // GRPCExternalPortKey is the key for grpc external port on server metadata

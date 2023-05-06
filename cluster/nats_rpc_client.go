@@ -121,6 +121,15 @@ func (ns *NatsRPCClient) SendPush(userID string, frontendSv *Server, push *proto
 	return ns.Send(topic, msg)
 }
 
+func (ns *NatsRPCClient) BroadcastPush(frontendSv *Server, push *protos.Push) error {
+	topic := GetPushBroadcastTopic(frontendSv.Type)
+	msg, err := proto.Marshal(push)
+	if err != nil {
+		return err
+	}
+	return ns.Send(topic, msg)
+}
+
 // SendKick kicks an user
 func (ns *NatsRPCClient) SendKick(userID string, serverType string, kick *protos.KickMsg) error {
 	topic := GetUserKickTopic(userID, serverType)

@@ -209,6 +209,21 @@ func (s *Session) updateEncodedData() error {
 	return nil
 }
 
+func Broadcast(group string, v interface{}, debarUid string) {
+	sessionsByUID.Range(func(key, value any) bool {
+		uid := key.(string)
+		sess := value.(*Session)
+		sessGroup := sess.String("group_name")
+
+		if uid != debarUid && group == sessGroup {
+			if err := sess.Push(group, v); err != nil {
+				logger.Log.Errorf("Broadcast uid data to client is error %s", err.Error())
+			}
+		}
+		return true
+	})
+}
+
 // Push message to client
 func (s *Session) Push(route string, v interface{}) error {
 	return s.entity.Push(route, v)

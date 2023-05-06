@@ -134,6 +134,11 @@ func (m *MockRPCClient) SendPush(userID string, frontendSv *cluster.Server, push
 	return ret0
 }
 
+func (m *MockRPCClient) BroadcastPush(frontendSv *cluster.Server, push *protos.Push) error {
+
+	return nil
+}
+
 // SendPush indicates an expected call of SendPush
 func (mr *MockRPCClientMockRecorder) SendPush(userID, frontendSv, push interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendPush", reflect.TypeOf((*MockRPCClient)(nil).SendPush), userID, frontendSv, push)

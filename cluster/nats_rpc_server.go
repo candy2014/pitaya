@@ -24,6 +24,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/topfreegames/pitaya/service"
 	"math"
 	"time"
 
@@ -57,6 +58,7 @@ type NatsRPCServer struct {
 	requests               []*protos.Request
 	userPushCh             chan *protos.Push
 	userKickCh             chan *protos.KickMsg
+	broadcastPushCh        chan *nats.Msg
 	sub                    *nats.Subscription
 	dropped                int
 	pitayaServer           protos.PitayaServer
@@ -109,6 +111,7 @@ func (ns *NatsRPCServer) configure() error {
 	// blocking producers on a massive push
 	ns.userPushCh = make(chan *protos.Push, ns.pushBufferSize)
 	ns.userKickCh = make(chan *protos.KickMsg, ns.messagesBufferSize)
+	ns.broadcastPushCh = make(chan *nats.Msg, ns.pushBufferSize)
 	return nil
 }
 
@@ -130,6 +133,11 @@ func GetUserKickTopic(uid string, svType string) string {
 // GetBindBroadcastTopic gets the topic on which bind events will be broadcasted
 func GetBindBroadcastTopic(svType string) string {
 	return fmt.Sprintf("pitaya/%s/bindings", svType)
+}
+
+// GetPushBroadcastTopic gets the topic on which broadcast events will be push
+func GetPushBroadcastTopic(svType string) string {
+	return fmt.Sprintf("pitaya/%s/broadcasted", svType)
 }
 
 // onSessionBind should be called on each session bind
@@ -155,6 +163,11 @@ func (ns *NatsRPCServer) SetPitayaServer(ps protos.PitayaServer) {
 
 func (ns *NatsRPCServer) subscribeToBindingsChannel() error {
 	_, err := ns.conn.ChanSubscribe(GetBindBroadcastTopic(ns.server.Type), ns.bindingsChan)
+	return err
+}
+
+func (ns *NatsRPCServer) subscribeToPushBroadcastChannel() error {
+	_, err := ns.conn.ChanSubscribe(GetPushBroadcastTopic(ns.server.Type), ns.broadcastPushCh)
 	return err
 }
 
@@ -233,6 +246,10 @@ func (ns *NatsRPCServer) getUserPushChannel() chan *protos.Push {
 	return ns.userPushCh
 }
 
+func (ns *NatsRPCServer) getBroadcastPushChChannel() chan *nats.Msg {
+	return ns.broadcastPushCh
+}
+
 func (ns *NatsRPCServer) getUserKickChannel() chan *protos.KickMsg {
 	return ns.userKickCh
 }
@@ -299,6 +316,19 @@ func (ns *NatsRPCServer) processPushes() {
 	}
 }
 
+func (ns *NatsRPCServer) processBroadcastPush() {
+	for push := range ns.getBroadcastPushChChannel() {
+		b := &protos.Push{}
+		err := proto.Unmarshal(push.Data, b)
+		logger.Log.Debugf("broadcast push to user %s: %v", b.GetUid(), string(push.Data))
+		server := ns.pitayaServer.(*service.RemoteService)
+		_, err = server.BroadcastToUser(context.Background(), b)
+		if err != nil {
+			logger.Log.Errorf("error sending push to user: %v", err)
+		}
+	}
+}
+
 func (ns *NatsRPCServer) processKick() {
 	for kick := range ns.getUserKickChannel() {
 		logger.Log.Debugf("Sending kick to user %s: %v", kick.GetUserId())
@@ -335,6 +365,11 @@ func (ns *NatsRPCServer) Init() error {
 	if err != nil {
 		return err
 	}
+
+	err = ns.subscribeToPushBroadcastChannel()
+	if err != nil {
+		return err
+	}
 	// this handles remote messages
 	for i := 0; i < ns.config.GetInt("pitaya.concurrency.remote.service"); i++ {
 		go ns.processMessages(i)
@@ -344,6 +379,7 @@ func (ns *NatsRPCServer) Init() error {
 
 	// this should be so fast that we shoudn't need concurrency
 	go ns.processPushes()
+	go ns.processBroadcastPush()
 	go ns.processSessionBindings()
 	go ns.processKick()
 
