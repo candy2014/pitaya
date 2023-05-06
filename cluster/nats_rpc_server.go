@@ -24,7 +24,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/topfreegames/pitaya/service"
+	//"github.com/topfreegames/pitaya/service"
 	"math"
 	"time"
 
@@ -321,8 +321,7 @@ func (ns *NatsRPCServer) processBroadcastPush() {
 		b := &protos.Push{}
 		err := proto.Unmarshal(push.Data, b)
 		logger.Log.Debugf("broadcast push to user %s: %v", b.GetUid(), string(push.Data))
-		server := ns.pitayaServer.(*service.RemoteService)
-		_, err = server.BroadcastToUser(context.Background(), b)
+		_, err = ns.pitayaServer.BroadcastToUser(context.Background(), b)
 		if err != nil {
 			logger.Log.Errorf("error sending push to user: %v", err)
 		}

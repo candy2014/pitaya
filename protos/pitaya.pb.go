@@ -91,6 +91,7 @@ type PitayaServer interface {
 	PushToUser(context.Context, *Push) (*Response, error)
 	SessionBindRemote(context.Context, *BindMsg) (*Response, error)
 	KickUser(context.Context, *KickMsg) (*KickAnswer, error)
+	BroadcastToUser(ctx context.Context, push *Push) (*Response, error)
 }
 
 func RegisterPitayaServer(s *grpc.Server, srv PitayaServer) {

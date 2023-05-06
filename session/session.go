@@ -210,7 +210,7 @@ func (s *Session) updateEncodedData() error {
 }
 
 func Broadcast(group string, v interface{}, debarUid string) {
-	sessionsByUID.Range(func(key, value any) bool {
+	sessionsByUID.Range(func(key, value interface{}) bool {
 		uid := key.(string)
 		sess := value.(*Session)
 		sessGroup := sess.String("group_name")
