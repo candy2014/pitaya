@@ -53,6 +53,12 @@ type NatsRPCClient struct {
 	server                 *Server
 	metricsReporters       []metrics.Reporter
 	appDieChan             chan bool
+	msg                    chan *NatsClientMessage
+}
+
+type NatsClientMessage struct {
+	topic string
+	msg   []byte
 }
 
 // NewNatsRPCClient ctor
@@ -70,10 +76,20 @@ func NewNatsRPCClient(
 		appDieChan:        appDieChan,
 		connectionTimeout: nats.DefaultTimeout,
 	}
+	pushBufferSize := ns.config.GetInt("pitaya.buffer.cluster.rpc.server.nats.push")
+	ns.msg = make(chan *NatsClientMessage, pushBufferSize)
 	if err := ns.configure(); err != nil {
 		return nil, err
 	}
+	go ns.processMessages()
 	return ns, nil
+}
+
+func NewNatsClientMessage(topic string, msg []byte) *NatsClientMessage {
+	return &NatsClientMessage{
+		topic: topic,
+		msg:   msg,
+	}
 }
 
 func (ns *NatsRPCClient) configure() error {
@@ -108,6 +124,15 @@ func (ns *NatsRPCClient) Send(topic string, data []byte) error {
 	if !ns.running {
 		return constants.ErrRPCClientNotInitialized
 	}
+	ns.msg <- NewNatsClientMessage(topic, data)
+	return nil
+}
+
+// SendMSG publishes a message in a given topic
+func (ns *NatsRPCClient) SendMSG(topic string, data []byte) error {
+	if !ns.running {
+		return constants.ErrRPCClientNotInitialized
+	}
 	return ns.conn.Publish(topic, data)
 }
 
@@ -119,6 +144,21 @@ func (ns *NatsRPCClient) SendPush(userID string, frontendSv *Server, push *proto
 		return err
 	}
 	return ns.Send(topic, msg)
+}
+
+func (ns *NatsRPCClient) processMessages() {
+	defer (func() {
+		close(ns.msg)
+
+	})()
+	for {
+		select {
+		case msg := <-ns.msg:
+			if err := ns.SendMSG(msg.topic, msg.msg); err != nil {
+				logger.Log.Errorf("nats send is err %s", err.Error())
+			}
+		}
+	}
 }
 
 func (ns *NatsRPCClient) BroadcastPush(frontendSv *Server, push *protos.Push) error {

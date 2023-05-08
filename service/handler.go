@@ -240,7 +240,7 @@ func (h *HandlerService) processPacket(a *agent.Agent, p *packet.Packet) error {
 		//	logger.Log.Errorf("Error sending handshake response: %s", err.Error())
 		//	return err
 		//}
-		logger.Log.Debugf("Session handshake Id=%d, Remote=%s", a.Session.ID(), a.RemoteAddr())
+		//logger.Log.Debugf("Session handshake Id=%d, Remote=%s", a.Session.ID(), a.RemoteAddr())
 
 		// Parse the json sent with the handshake by the client
 		handshakeData := &session.HandshakeData{}
@@ -251,7 +251,8 @@ func (h *HandlerService) processPacket(a *agent.Agent, p *packet.Packet) error {
 		}
 
 		a.Session.SetHandshakeData(handshakeData)
-		a.SetStatus(constants.StatusHandshake)
+		//a.SetStatus(constants.StatusHandshake)
+		a.SetStatus(constants.StatusWorking) //TODO 当前注释掉上面代码客户端发送握手之后即可链接成功
 		err = a.Session.Set(constants.IPVersionKey, a.IPVersion())
 		if err != nil {
 			logger.Log.Warnf("failed to save ip version on session: %q\n", err)
@@ -269,12 +270,11 @@ func (h *HandlerService) processPacket(a *agent.Agent, p *packet.Packet) error {
 		if err != nil {
 			return err
 		}
-		err = executeBeforeFilters(context.Background(), a, msg)
-
-		if err != nil {
-			return err
-		}
-
+		//err = executeBeforeFilters(context.Background(), a, msg)
+		//
+		//if err != nil {
+		//	return err
+		//}
 		h.processMessage(a, msg)
 	case packet.Heartbeat:
 		// expected
