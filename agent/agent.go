@@ -370,13 +370,13 @@ func (a *Agent) heartbeat() {
 			}
 
 			// chSend is never closed so we need this to don't block if agent is already closed
-			select {
+			//select {
 			//case a.chSend <- pendingWrite{data: a.pendingHeartbeatWrite()}:
-			case <-a.chDie:
-				return
-			case <-a.chStopHeartbeat:
-				return
-			}
+			//case <-a.chDie:
+			//	return
+			//case <-a.chStopHeartbeat:
+			//	return
+			//}
 		case <-a.chDie:
 			return
 		case <-a.chStopHeartbeat:
