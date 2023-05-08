@@ -278,6 +278,7 @@ func (h *HandlerService) processPacket(a *agent.Agent, p *packet.Packet) error {
 		h.processMessage(a, msg)
 	case packet.Heartbeat:
 		// expected
+		a.PendingHeartbeatWrite()
 	}
 
 	a.SetLastAt()

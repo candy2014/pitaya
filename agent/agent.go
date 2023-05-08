@@ -371,7 +371,7 @@ func (a *Agent) heartbeat() {
 
 			// chSend is never closed so we need this to don't block if agent is already closed
 			select {
-			case a.chSend <- pendingWrite{data: a.pendingHeartbeatWrite()}:
+			//case a.chSend <- pendingWrite{data: a.pendingHeartbeatWrite()}:
 			case <-a.chDie:
 				return
 			case <-a.chStopHeartbeat:
@@ -385,11 +385,10 @@ func (a *Agent) heartbeat() {
 	}
 }
 
-func (a *Agent) pendingHeartbeatWrite() []byte {
+func (a *Agent) PendingHeartbeatWrite() {
 	if d, err := a.encoder.Encode(packet.Heartbeat, nil); err == nil {
-		return d
+		a.chSend <- pendingWrite{data: d}
 	}
-	return nil
 }
 
 func onSessionClosed(s *session.Session) {
