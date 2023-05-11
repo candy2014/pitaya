@@ -331,9 +331,8 @@ func (s *Session) Bind(ctx context.Context, uid string) error {
 
 // Kick kicks the user
 func (s *Session) Kick(ctx context.Context) error {
-	err := s.entity.Kick(ctx)
-	if err != nil {
-		return err
+	if err := s.entity.Kick(ctx); err != nil {
+		logger.Log.Errorf("kick session is error %s ", err.Error())
 	}
 	return s.entity.Close()
 }
