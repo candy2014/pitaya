@@ -262,9 +262,9 @@ func (a *Agent) ResponseMID(ctx context.Context, mid uint, v interface{}, isErro
 func (a *Agent) Close() error {
 	a.closeMutex.Lock()
 	defer a.closeMutex.Unlock()
-	if a.GetStatus() == constants.StatusClosed {
-		return constants.ErrCloseClosedSession
-	}
+	//if a.GetStatus() == constants.StatusClosed {
+	//	return constants.ErrCloseClosedSession
+	//}
 	a.SetStatus(constants.StatusClosed)
 
 	logger.Log.Debugf("Session closed, ID=%d, UID=%s, IP=%s",
@@ -369,14 +369,16 @@ func (a *Agent) heartbeat() {
 				return
 			}
 
-			// chSend is never closed so we need this to don't block if agent is already closed
-			//select {
+			//chSend is never closed so we need this to don't block if agent is already closed
+			select {
 			//case a.chSend <- pendingWrite{data: a.pendingHeartbeatWrite()}:
-			//case <-a.chDie:
-			//	return
-			//case <-a.chStopHeartbeat:
-			//	return
-			//}
+			case <-a.chDie:
+				return
+			case <-a.chStopHeartbeat:
+				return
+			default:
+				logger.Log.Info("Session heartbeat ！！！！！！！！！！！！！！！")
+			}
 		case <-a.chDie:
 			return
 		case <-a.chStopHeartbeat:
