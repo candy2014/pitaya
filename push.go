@@ -21,6 +21,7 @@
 package pitaya
 
 import (
+	"bytes"
 	"github.com/topfreegames/pitaya/cluster"
 	"github.com/topfreegames/pitaya/constants"
 	"github.com/topfreegames/pitaya/logger"
@@ -88,4 +89,76 @@ func SendPushToUsers(route string, v interface{}, uids []string, frontendType st
 	}
 
 	return nil, nil
+}
+
+// SendPushToUserMore sends a message to the given list of users
+func SendPushToUserMore(route string, v []interface{}, uid string, frontendType string) error {
+	if !app.server.Frontend && frontendType == "" {
+		return constants.ErrFrontendTypeNotSpecified
+	}
+	if v == nil || len(v) == 0 {
+		return constants.ErrFrontendTypeNotSpecified
+	}
+
+	vlen := len(v)
+	nextPos := 0
+
+	for {
+		var output []byte
+		buffer := bytes.NewBuffer(output)
+
+		curPos := nextPos
+		for ; curPos < vlen; curPos++ {
+			data, err := util.SerializeOrRaw(app.serializer, v[curPos])
+			if err != nil {
+				return err
+			}
+			if len(data) >= 1024 {
+				logger.Log.Errorf("Type=SendPushToUserMore Route=%s, Data=%+v, SvType=%s, #User=%s", route, v, frontendType, uid)
+			} else if len(data) >= 2048 {
+				logger.Log.Errorf("Type=SendPushToUserMore Route=%s, Data=%+v, SvType=%s, #User=%s", route, v, frontendType, uid)
+			}
+			if buffer.Len()+len(data) < 2048 {
+				buffer.Write(data)
+			} else {
+				nextPos = curPos
+			}
+		}
+
+		var err error
+		var notPushedUids []string
+
+		logger.Log.Debugf("Type=SendPushToUserMore Route=%s, Data=%+v, SvType=%s, #Users=%s", route, v, frontendType, uid)
+
+		if s := session.GetSessionByUID(uid); s != nil && app.server.Type == frontendType {
+			if err := s.Push(route, buffer.Bytes()); err != nil {
+				notPushedUids = append(notPushedUids, uid)
+				logger.Log.Errorf("Type=SendPushToUserMore Session push message error, ID=%d, UID=%s, Error=%s",
+					s.ID(), s.UID(), err.Error())
+			}
+		} else if app.rpcClient != nil {
+			push := &protos.Push{
+				Route: route,
+				Uid:   uid,
+				Data:  buffer.Bytes(),
+			}
+			if err = app.rpcClient.SendPush(uid, &cluster.Server{Type: frontendType}, push); err != nil {
+				notPushedUids = append(notPushedUids, uid)
+				logger.Log.Errorf("Type=SendPushToUserMore RPCClient send message error, UID=%s, SvType=%s, Error=%s", uid, frontendType, err.Error())
+			}
+		} else {
+			notPushedUids = append(notPushedUids, uid)
+		}
+
+		if len(notPushedUids) != 0 {
+			return constants.ErrPushingToUsers
+		}
+
+		// 全处理完成
+		if curPos >= vlen {
+			break
+		}
+	}
+
+	return nil
 }
