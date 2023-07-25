@@ -46,7 +46,7 @@ const (
 // SessionCtxKey is the context key where the session will be set
 var SessionCtxKey = "session"
 
-// SessionIdCtxKey need int64
+// SessionIdCtxKey need string
 var SessionIdCtxKey = "session-id"
 
 // LoggerCtxKey is the context key where the default logger will be set
