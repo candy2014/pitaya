@@ -24,6 +24,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	context2 "github.com/topfreegames/pitaya/context"
+	"math/rand"
+
 	//"github.com/topfreegames/pitaya/service"
 	"math"
 	"time"
@@ -53,7 +56,7 @@ type NatsRPCServer struct {
 	stopChan               chan bool
 	subChan                chan *nats.Msg // subChan is the channel used by the server to receive network messages addressed to itself
 	bindingsChan           chan *nats.Msg // bindingsChan receives notify from other servers on every user bind to session
-	unhandledReqCh         chan *protos.Request
+	unhandledReqCh         []chan *protos.Request
 	responses              []*protos.Response
 	requests               []*protos.Request
 	userPushCh             chan *protos.Push
@@ -73,11 +76,17 @@ func NewNatsRPCServer(
 	metricsReporters []metrics.Reporter,
 	appDieChan chan bool,
 ) (*NatsRPCServer, error) {
+	dispatchThreadNum := config.GetInt("pitaya.concurrency.remote.service")
+	chLocals := make([]chan *protos.Request, dispatchThreadNum)
+	for i := 0; i < dispatchThreadNum; i++ {
+		chLocals[i] = make(chan *protos.Request, dispatchThreadNum)
+	}
+
 	ns := &NatsRPCServer{
 		config:            config,
 		server:            server,
 		stopChan:          make(chan bool),
-		unhandledReqCh:    make(chan *protos.Request),
+		unhandledReqCh:    chLocals,
 		dropped:           0,
 		metricsReporters:  metricsReporters,
 		appDieChan:        appDieChan,
@@ -201,7 +210,9 @@ func (ns *NatsRPCServer) subscribeToUserMessages(uid string, svType string) (*na
 func (ns *NatsRPCServer) handleMessages() {
 	defer (func() {
 		ns.conn.Drain()
-		close(ns.unhandledReqCh)
+		for i := range ns.unhandledReqCh {
+			close(ns.unhandledReqCh[i])
+		}
 		close(ns.subChan)
 		close(ns.bindingsChan)
 	})()
@@ -229,8 +240,27 @@ func (ns *NatsRPCServer) handleMessages() {
 				logger.Log.Error("error unmarshalling rpc message:", err.Error())
 				continue
 			}
+
+			var sessionId, thread int64
+			if req.Session != nil {
+				sessionId = req.Session.Id
+			} else {
+				ctx, _ := util.GetContextFromRequest(req, "")
+				if id := context2.GetFromPropagateCtx(ctx, constants.SessionIdCtxKey); id != nil {
+					sessionId = id.(int64)
+				}
+			}
+
+			if sessionId == 0 {
+				dispatchThreadNum := ns.config.GetInt("pitaya.concurrency.remote.service")
+				thread = rand.Int63n(int64(dispatchThreadNum))
+			} else {
+				dispatchThreadNum := ns.config.GetInt("pitaya.concurrency.remote.service")
+				thread = sessionId % int64(dispatchThreadNum)
+			}
+
 			req.Msg.Reply = msg.Reply
-			ns.unhandledReqCh <- req
+			ns.unhandledReqCh[int(thread)] <- req
 		case <-ns.stopChan:
 			return
 		}
@@ -238,8 +268,8 @@ func (ns *NatsRPCServer) handleMessages() {
 }
 
 // GetUnhandledRequestsChannel gets the unhandled requests channel from nats rpc server
-func (ns *NatsRPCServer) GetUnhandledRequestsChannel() chan *protos.Request {
-	return ns.unhandledReqCh
+func (ns *NatsRPCServer) GetUnhandledRequestsChannel(threadId int) chan *protos.Request {
+	return ns.unhandledReqCh[threadId]
 }
 
 func (ns *NatsRPCServer) getUserPushChannel() chan *protos.Push {
@@ -273,7 +303,7 @@ func (ns *NatsRPCServer) marshalResponse(res *protos.Response) ([]byte, error) {
 }
 
 func (ns *NatsRPCServer) processMessages(threadID int) {
-	for ns.requests[threadID] = range ns.GetUnhandledRequestsChannel() {
+	for ns.requests[threadID] = range ns.GetUnhandledRequestsChannel(threadID) {
 		logger.Log.Debugf("(%d) processing message %v", threadID, ns.requests[threadID].GetMsg().GetId())
 		ctx, err := util.GetContextFromRequest(ns.requests[threadID], ns.server.ID)
 		if err != nil {
