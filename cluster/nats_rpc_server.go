@@ -25,6 +25,7 @@ import (
 	"errors"
 	"fmt"
 	context2 "github.com/topfreegames/pitaya/context"
+	"hash/fnv"
 	"math/rand"
 
 	//"github.com/topfreegames/pitaya/service"
@@ -241,20 +242,24 @@ func (ns *NatsRPCServer) handleMessages() {
 				continue
 			}
 
-			var sessionId, thread int64
+			var thread int64
+			var sessionUid string
 			if req.Session != nil {
-				sessionId = req.Session.Id
+				sessionUid = req.Session.Uid
 			} else {
 				ctx, _ := util.GetContextFromRequest(req, "")
 				if id := context2.GetFromPropagateCtx(ctx, constants.SessionIdCtxKey); id != nil {
-					sessionId = int64(id.(float64))
+					if uid, ok := id.(string); ok {
+						sessionUid = uid
+					}
 				}
 			}
 
-			if sessionId == 0 {
+			if sessionUid == "" {
 				dispatchThreadNum := ns.config.GetInt("pitaya.concurrency.remote.service")
 				thread = rand.Int63n(int64(dispatchThreadNum))
 			} else {
+				sessionId := int64(hash(sessionUid))
 				dispatchThreadNum := ns.config.GetInt("pitaya.concurrency.remote.service")
 				thread = sessionId % int64(dispatchThreadNum)
 			}
@@ -265,6 +270,12 @@ func (ns *NatsRPCServer) handleMessages() {
 			return
 		}
 	}
+}
+
+func hash(s string) uint64 {
+	h := fnv.New64()
+	h.Write([]byte(s))
+	return h.Sum64()
 }
 
 // GetUnhandledRequestsChannel gets the unhandled requests channel from nats rpc server
