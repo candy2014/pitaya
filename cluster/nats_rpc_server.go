@@ -247,7 +247,7 @@ func (ns *NatsRPCServer) handleMessages() {
 			} else {
 				ctx, _ := util.GetContextFromRequest(req, "")
 				if id := context2.GetFromPropagateCtx(ctx, constants.SessionIdCtxKey); id != nil {
-					sessionId = id.(int64)
+					sessionId = int64(id.(float64))
 				}
 			}
 
