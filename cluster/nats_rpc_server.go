@@ -242,7 +242,7 @@ func (ns *NatsRPCServer) handleMessages() {
 				continue
 			}
 
-			var thread int64
+			var threadId int64 = -1
 			var sessionUid string
 			if req.Session != nil {
 				sessionUid = req.Session.Uid
@@ -254,18 +254,23 @@ func (ns *NatsRPCServer) handleMessages() {
 					}
 				}
 			}
+			dispatchThreadNum := ns.config.GetInt("pitaya.concurrency.remote.service")
 
-			if sessionUid == "" {
-				dispatchThreadNum := ns.config.GetInt("pitaya.concurrency.remote.service")
-				thread = rand.Int63n(int64(dispatchThreadNum))
-			} else {
+			random := func() {
+				threadId = rand.Int63n(int64(dispatchThreadNum))
+			}
+
+			if sessionUid != "" {
 				sessionId := int64(hash(sessionUid))
-				dispatchThreadNum := ns.config.GetInt("pitaya.concurrency.remote.service")
-				thread = sessionId % int64(dispatchThreadNum)
+				threadId = sessionId % int64(dispatchThreadNum)
+			}
+
+			if threadId < 0 || threadId >= int64(dispatchThreadNum) {
+				random()
 			}
 
 			req.Msg.Reply = msg.Reply
-			ns.unhandledReqCh[int(thread)] <- req
+			ns.unhandledReqCh[int(threadId)] <- req
 		case <-ns.stopChan:
 			return
 		}
