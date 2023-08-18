@@ -118,7 +118,7 @@ func SendPushToUserMore(route string, v []interface{}, uid string, frontendType 
 			} else if len(data) >= 2048 {
 				logger.Log.Errorf("Type=SendPushToUserMore Route=%s, Data=%+v, SvType=%s, #User=%s", route, v, frontendType, uid)
 			}
-			if buffer.Len()+len(data) < 2048 {
+			if buffer.Len()+len(data) < 8192 {
 				buffer.Write(data)
 			} else {
 				nextPos = curPos
