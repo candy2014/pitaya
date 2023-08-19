@@ -122,6 +122,7 @@ func SendPushToUserMore(route string, v []interface{}, uid string, frontendType 
 				buffer.Write(data)
 			} else {
 				nextPos = curPos
+				break
 			}
 		}
 
