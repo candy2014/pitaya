@@ -35,6 +35,8 @@ import (
 func Broadcast(ctx context.Context, routeStr string, reply proto.Message, arg proto.Message, params ...interface{}) (int, error) {
 	var svrs map[string]*cluster.Server
 	var item int
+	var meta, data string
+	var ok, okk bool
 	r, err := route.Decode(routeStr)
 
 	if err != nil {
@@ -46,20 +48,23 @@ func Broadcast(ctx context.Context, routeStr string, reply proto.Message, arg pr
 	}
 
 	if svrs, err = GetServersByType(r.SvType); err == nil {
+		if len(params) > 0 {
+			meta, ok = params[0].(string)
+			data, okk = params[1].(string)
+		}
+
 		for i := range svrs {
 			s := svrs[i]
-
-			if len(params) > 0 {
-				meta, ok := params[0].(string)
-				data, okk := params[1].(string)
-				if ok && okk && meta == data {
-					if err = doSendRPC(ctx, s.ID, routeStr, reply, arg); err != nil {
-						logger.Log.Errorf("执行广播到 %s 服务 错误 serverid=%s 错误信息是 %s", r.SvType, s.ID, err.Error())
-						continue
-					}
-					item++
+			if ok && okk {
+				if nowData, okay := s.Metadata[meta]; !okay || nowData != data {
+					continue
 				}
 			}
+			if err = doSendRPC(ctx, s.ID, routeStr, reply, arg); err != nil {
+				logger.Log.Errorf("执行广播到 %s 服务 错误 serverid=%s 错误信息是 %s", r.SvType, s.ID, err.Error())
+				continue
+			}
+			item++
 		}
 	}
 	return item, nil
