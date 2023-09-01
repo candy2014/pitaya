@@ -22,6 +22,8 @@ package pitaya
 
 import (
 	"context"
+	"github.com/topfreegames/pitaya/cluster"
+	"github.com/topfreegames/pitaya/logger"
 	"reflect"
 
 	"github.com/golang/protobuf/proto"
@@ -29,6 +31,39 @@ import (
 	"github.com/topfreegames/pitaya/route"
 	"github.com/topfreegames/pitaya/worker"
 )
+
+func Broadcast(ctx context.Context, routeStr string, reply proto.Message, arg proto.Message, params ...interface{}) (int, error) {
+	var svrs map[string]*cluster.Server
+	var item int
+	r, err := route.Decode(routeStr)
+
+	if err != nil {
+		return 0, err
+	}
+
+	if r.SvType == "" {
+		return 0, constants.ErrNoServerTypeChosenForRPC
+	}
+
+	if svrs, err = GetServersByType(r.SvType); err == nil {
+		for i := range svrs {
+			s := svrs[i]
+
+			if len(params) > 0 {
+				meta, ok := params[0].(string)
+				data, okk := params[1].(string)
+				if ok && okk && meta == data {
+					if err = doSendRPC(ctx, s.ID, routeStr, reply, arg); err != nil {
+						logger.Log.Errorf("执行广播到 %s 服务 错误 serverid=%s 错误信息是 %s", r.SvType, s.ID, err.Error())
+						continue
+					}
+					item++
+				}
+			}
+		}
+	}
+	return item, nil
+}
 
 // RPC calls a method in a different server
 func RPC(ctx context.Context, routeStr string, reply proto.Message, arg proto.Message) error {
