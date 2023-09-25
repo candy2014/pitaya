@@ -44,9 +44,6 @@ func NewUniqueSession(server *cluster.Server, rpcServer cluster.RPCServer, rpcCl
 
 // OnUserBind method should be called when a user binds a session in remote servers
 func (u *UniqueSession) OnUserBind(uid, fid string) {
-	if u.server.ID == fid {
-		return
-	}
 	oldSession := session.GetSessionByUID(uid)
 	if oldSession != nil {
 		// TODO: it would be nice to set this correctly
