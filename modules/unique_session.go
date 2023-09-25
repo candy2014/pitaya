@@ -50,6 +50,7 @@ func (u *UniqueSession) OnUserBind(uid, fid string) {
 	oldSession := session.GetSessionByUID(uid)
 	if oldSession != nil {
 		// TODO: it would be nice to set this correctly
+		oldSession.Push("onKick", "onKick")
 		oldSession.Kick(context.Background())
 	}
 }
