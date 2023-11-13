@@ -22,6 +22,7 @@ package modules
 
 import (
 	"context"
+	pcontext "github.com/topfreegames/pitaya/context"
 
 	"github.com/topfreegames/pitaya/cluster"
 	"github.com/topfreegames/pitaya/session"
@@ -47,8 +48,8 @@ func (u *UniqueSession) OnUserBind(uid, fid string) {
 	oldSession := session.GetSessionByUID(uid)
 	if oldSession != nil {
 		// TODO: it would be nice to set this correctly
-		oldSession.Push("onKick", "onKick")
-		oldSession.Kick(context.Background())
+		pText := pcontext.AddToPropagateCtx(context.Background(), "repeat", true)
+		oldSession.Kick(pText)
 	}
 }
 
@@ -57,7 +58,8 @@ func (u *UniqueSession) Init() error {
 	session.OnSessionBind(func(ctx context.Context, s *session.Session) error {
 		oldSession := session.GetSessionByUID(s.UID())
 		if oldSession != nil {
-			return oldSession.Kick(ctx)
+			pText := pcontext.AddToPropagateCtx(context.Background(), "repeat", true)
+			return oldSession.Kick(pText)
 		}
 		err := u.rpcClient.BroadcastSessionBind(s.UID())
 		return err

@@ -305,7 +305,12 @@ func (a *Agent) GetStatus() int32 {
 // Kick sends a kick packet to a client
 func (a *Agent) Kick(ctx context.Context) error {
 	// packet encode
-	p, err := a.encoder.Encode(packet.Kick, nil)
+	var data []byte
+
+	if value := ctx.Value("repeat"); value != nil {
+		data = []byte("repeat")
+	}
+	p, err := a.encoder.Encode(packet.Kick, data)
 	if err != nil {
 		return err
 	}
