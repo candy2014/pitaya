@@ -25,6 +25,7 @@ import (
 	gojson "encoding/json"
 	e "errors"
 	"fmt"
+	pcontext "github.com/topfreegames/pitaya/context"
 	"net"
 	"strings"
 	"sync"
@@ -306,8 +307,7 @@ func (a *Agent) GetStatus() int32 {
 func (a *Agent) Kick(ctx context.Context) error {
 	// packet encode
 	var data []byte
-
-	if value := ctx.Value("repeat"); value != nil {
+	if value := pcontext.GetFromPropagateCtx(ctx, "repeat"); value != nil {
 		data = []byte("repeat")
 	}
 	p, err := a.encoder.Encode(packet.Kick, data)
