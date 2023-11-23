@@ -22,6 +22,7 @@ package modules
 
 import (
 	"context"
+	"github.com/topfreegames/pitaya"
 	pcontext "github.com/topfreegames/pitaya/context"
 
 	"github.com/topfreegames/pitaya/cluster"
@@ -46,7 +47,7 @@ func NewUniqueSession(server *cluster.Server, rpcServer cluster.RPCServer, rpcCl
 // OnUserBind method should be called when a user binds a session in remote servers
 func (u *UniqueSession) OnUserBind(uid, fid string) {
 	oldSession := session.GetSessionByUID(uid)
-	if oldSession != nil {
+	if oldSession != nil && pitaya.GetServerID() != fid { //当前服不是发过来的网关服务器
 		// TODO: it would be nice to set this correctly
 		pText := pcontext.AddToPropagateCtx(context.Background(), "repeat", true)
 		oldSession.Kick(pText)
