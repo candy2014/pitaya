@@ -189,7 +189,7 @@ func OnSessionClose(f func(s *Session)) {
 }
 
 // Range sessionsByUID迭代
-func Range(f func(key, value any) bool) {
+func Range(f func(key, value interface{}) bool) {
 	sessionsByUID.Range(f)
 }
 
