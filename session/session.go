@@ -188,6 +188,11 @@ func OnSessionClose(f func(s *Session)) {
 	SessionCloseCallbacks = append(SessionCloseCallbacks, f)
 }
 
+// Range sessionsByUID迭代
+func Range(f func(key, value any) bool) {
+	sessionsByUID.Range(f)
+}
+
 // CloseAll calls Close on all sessions
 func CloseAll() {
 	logger.Log.Debugf("closing all sessions, %d sessions", SessionCount)
