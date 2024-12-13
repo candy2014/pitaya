@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"github.com/nats-io/nuid"
 	"github.com/topfreegames/pitaya/router"
+	"math/rand"
 	"strconv"
 	"strings"
 	"time"
@@ -338,7 +339,8 @@ func (h *HandlerService) processMessage(a *agent.Agent, msg *message.Message) {
 		route: r,
 		msg:   msg,
 	}
-	thread := a.Session.ID() % h.dispatchThreadNum
+	thread := rand.Int63n(h.dispatchThreadNum)
+
 	if r.SvType == h.server.Type {
 		h.chLocalProcess[thread] <- message
 	} else {
