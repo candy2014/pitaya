@@ -268,7 +268,7 @@ func (ns *NatsRPCServer) handleMessages() {
 			if threadId < 0 || threadId >= int64(dispatchThreadNum) {
 				random()
 			}
-			logger.Log.Errorf("当前的sessionUid %s threadId %d", sessionUid, threadId)
+			logger.Log.Errorf("当前的sessionUid %s threadId %d route %s", sessionUid, threadId, req.Msg.Route)
 			req.Msg.Reply = msg.Reply
 			ns.unhandledReqCh[int(threadId)] <- req
 		case <-ns.stopChan:
