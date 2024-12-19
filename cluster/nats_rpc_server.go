@@ -25,7 +25,7 @@ import (
 	"errors"
 	"fmt"
 	context2 "github.com/topfreegames/pitaya/context"
-	"hash/crc32"
+	"hash/fnv"
 	"math/rand"
 
 	//"github.com/topfreegames/pitaya/service"
@@ -242,7 +242,7 @@ func (ns *NatsRPCServer) handleMessages() {
 				continue
 			}
 
-			var threadId int64 = -1
+			var threadId int = -1
 			var sessionUid string
 			if req.Session != nil {
 				sessionUid = req.Session.Uid
@@ -257,15 +257,15 @@ func (ns *NatsRPCServer) handleMessages() {
 			dispatchThreadNum := ns.config.GetInt("pitaya.concurrency.remote.service")
 
 			random := func() {
-				threadId = rand.Int63n(int64(dispatchThreadNum))
+				threadId = int(rand.Int63n(int64(dispatchThreadNum)))
 			}
 
 			if sessionUid != "" {
-				sessionId := int64(hash(sessionUid))
-				threadId = sessionId % int64(dispatchThreadNum)
+				sessionId := hash(sessionUid)
+				threadId = int(sessionId % uint64(dispatchThreadNum))
 			}
 
-			if threadId < 0 || threadId >= int64(dispatchThreadNum) {
+			if threadId < 0 || threadId >= dispatchThreadNum {
 				random()
 			}
 			logger.Log.Errorf("当前的sessionUid %s threadId %d route %s", sessionUid, threadId, req.Msg.Route)
@@ -278,7 +278,9 @@ func (ns *NatsRPCServer) handleMessages() {
 }
 
 func hash(s string) uint64 {
-	return uint64(crc32.ChecksumIEEE([]byte(s)))
+	h := fnv.New64()
+	h.Write([]byte(s))
+	return h.Sum64()
 }
 
 // GetUnhandledRequestsChannel gets the unhandled requests channel from nats rpc server
