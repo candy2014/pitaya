@@ -25,7 +25,7 @@ import (
 	"errors"
 	"fmt"
 	context2 "github.com/topfreegames/pitaya/context"
-	"hash/fnv"
+	"hash/crc32"
 	"math/rand"
 
 	//"github.com/topfreegames/pitaya/service"
@@ -278,9 +278,7 @@ func (ns *NatsRPCServer) handleMessages() {
 }
 
 func hash(s string) uint64 {
-	h := fnv.New64()
-	h.Write([]byte(s))
-	return h.Sum64()
+	return uint64(crc32.ChecksumIEEE([]byte(s)))
 }
 
 // GetUnhandledRequestsChannel gets the unhandled requests channel from nats rpc server
