@@ -161,7 +161,7 @@ func Decode(data []byte) (*Message, error) {
 	m.Err = flag&errorMask == errorMask
 
 	if routable(m.Type) {
-		if true /*flag&msgRouteCompressMask == 1*/ {
+		if true {
 			m.compressed = true
 			code := binary.BigEndian.Uint16(data[offset:(offset + 2)])
 			routesCodesMutex.RLock()
