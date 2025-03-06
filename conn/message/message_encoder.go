@@ -157,6 +157,7 @@ func Decode(data []byte) (*Message, error) {
 	//	}
 	//	m.ID = id
 	//}
+	m.ID = 1
 
 	m.Err = flag&errorMask == errorMask
 
