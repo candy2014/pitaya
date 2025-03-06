@@ -95,14 +95,12 @@ func (me *MessagesEncoder) Encode(message *Message) ([]byte, error) {
 	//	}
 	//}
 
-	if routable(message.Type) {
-		if compressed {
-			buf = append(buf, byte((code>>8)&0xFF))
-			buf = append(buf, byte(code&0xFF))
-		} else {
-			buf = append(buf, byte(len(message.Route)))
-			buf = append(buf, []byte(message.Route)...)
-		}
+	if compressed {
+		buf = append(buf, byte((code>>8)&0xFF))
+		buf = append(buf, byte(code&0xFF))
+	} else {
+		buf = append(buf, byte(len(message.Route)))
+		buf = append(buf, []byte(message.Route)...)
 	}
 
 	//if me.DataCompression {
