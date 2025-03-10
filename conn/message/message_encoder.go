@@ -68,9 +68,6 @@ func (me *MessagesEncoder) Encode(message *Message) ([]byte, error) {
 	//flag := byte(message.Type) << 1
 	flag := byte(message.Type)
 
-	if message.Err { //通用错误消息
-		message.Route = "game.common.error"
-	}
 	routesCodesMutex.RLock()
 	code, compressed := routes[message.Route]
 	routesCodesMutex.RUnlock()
@@ -78,9 +75,9 @@ func (me *MessagesEncoder) Encode(message *Message) ([]byte, error) {
 	//	flag |= msgRouteCompressMask
 	//}
 	//
-	//if message.Err {
-	//	flag |= errorMask
-	//}
+	if message.Err {
+		flag |= errorMask
+	}
 
 	buf = append(buf, flag)
 
