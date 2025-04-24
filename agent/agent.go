@@ -397,7 +397,7 @@ func (a *Agent) PendingHeartbeatWrite() {
 		"code": 200,
 		"sys": map[string]interface{}{
 			"heartbeat":  a.heartbeatTimeout.Seconds(),
-			"serverTime": time.Now().Unix(),
+			"serverTime": time.Now().UnixMilli(),
 		},
 	}
 	data, err := gojson.Marshal(hData)
@@ -434,7 +434,7 @@ func (a *Agent) SendHandshakeResponse() error {
 		"code": 200,
 		"sys": map[string]interface{}{
 			"heartbeat":  a.heartbeatTimeout.Seconds(),
-			"serverTime": time.Now().Unix(),
+			"serverTime": time.Now().UnixMilli(),
 		},
 	}
 	data, err := gojson.Marshal(hData)
