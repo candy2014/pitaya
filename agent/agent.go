@@ -395,7 +395,7 @@ func (a *Agent) heartbeat() {
 func (a *Agent) PendingHeartbeatWrite() {
 	hData := map[string]interface{}{
 		"code": 200,
-		"sys": map[string]interface{}{
+		"data": map[string]interface{}{
 			"heartbeat":  a.heartbeatTimeout.Seconds(),
 			"serverTime": time.Now().UnixMilli(),
 		},
@@ -432,7 +432,7 @@ func onSessionClosed(s *session.Session) {
 func (a *Agent) SendHandshakeResponse() error {
 	hData := map[string]interface{}{
 		"code": 200,
-		"sys": map[string]interface{}{
+		"data": map[string]interface{}{
 			"heartbeat":  a.heartbeatTimeout.Seconds(),
 			"serverTime": time.Now().UnixMilli(),
 		},
