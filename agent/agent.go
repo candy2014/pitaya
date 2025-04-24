@@ -393,9 +393,23 @@ func (a *Agent) heartbeat() {
 }
 
 func (a *Agent) PendingHeartbeatWrite() {
-	if d, err := a.encoder.Encode(packet.Heartbeat, nil); err == nil {
+	hData := map[string]interface{}{
+		"code": 200,
+		"sys": map[string]interface{}{
+			"heartbeat":  a.heartbeatTimeout.Seconds(),
+			"serverTime": time.Now().Unix(),
+		},
+	}
+	data, err := gojson.Marshal(hData)
+	if err != nil {
+		panic(err)
+	}
+	if d, err := a.encoder.Encode(packet.Heartbeat, data); err == nil {
 		a.chSend <- pendingWrite{data: d}
 	}
+	//if d, err := a.encoder.Encode(packet.Heartbeat, nil); err == nil {
+	//	a.chSend <- pendingWrite{data: d}
+	//}
 }
 
 func onSessionClosed(s *session.Session) {
@@ -416,7 +430,22 @@ func onSessionClosed(s *session.Session) {
 
 // SendHandshakeResponse sends a handshake response
 func (a *Agent) SendHandshakeResponse() error {
-	_, err := a.conn.Write(hrd)
+	hData := map[string]interface{}{
+		"code": 200,
+		"sys": map[string]interface{}{
+			"heartbeat":  a.heartbeatTimeout.Seconds(),
+			"serverTime": time.Now().Unix(),
+		},
+	}
+	data, err := gojson.Marshal(hData)
+	if err != nil {
+		panic(err)
+	}
+	if data, err = a.encoder.Encode(packet.Handshake, data); err != nil {
+		panic(err)
+	}
+	_, err = a.conn.Write(data)
+	//_, err := a.conn.Write(hrd)
 	return err
 }
 
