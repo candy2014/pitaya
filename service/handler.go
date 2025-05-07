@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"github.com/nats-io/nuid"
 	"github.com/topfreegames/pitaya/router"
+	"hash/fnv"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -339,7 +340,16 @@ func (h *HandlerService) processMessage(a *agent.Agent, msg *message.Message) {
 		route: r,
 		msg:   msg,
 	}
-	thread := rand.Int63n(h.dispatchThreadNum)
+	var thread int = -1
+	random := func() {
+		thread = int(rand.Int63n(int64(h.dispatchThreadNum)))
+	}
+
+	sessionId := hash(a.Session.UID())
+	thread = int(sessionId % uint64(h.dispatchThreadNum))
+	if thread < 0 || int64(thread) >= h.dispatchThreadNum {
+		random()
+	}
 
 	if r.SvType == h.server.Type {
 		h.chLocalProcess[thread] <- message
@@ -350,6 +360,12 @@ func (h *HandlerService) processMessage(a *agent.Agent, msg *message.Message) {
 			logger.Log.Warnf("request made to another server type but no remoteService running")
 		}
 	}
+}
+
+func hash(s string) uint64 {
+	h := fnv.New64()
+	h.Write([]byte(s))
+	return h.Sum64()
 }
 
 func (h *HandlerService) localProcess(ctx context.Context, a *agent.Agent, route *route.Route, msg *message.Message) {
