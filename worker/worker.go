@@ -24,6 +24,7 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"time"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/topfreegames/pitaya/config"
@@ -87,6 +88,21 @@ func (w *Worker) EnqueueRPC(
 	reply, arg proto.Message,
 ) (jid string, err error) {
 	opts := w.enqueueOptions(w.opts)
+	return workers.EnqueueWithOptions(rpcQueue, class, &rpcInfo{
+		Route:    routeStr,
+		Metadata: metadata,
+		Arg:      arg,
+		Reply:    reply,
+	}, opts)
+}
+
+// EnqueueRPCScheduled enqueues rpc job to worker
+func (w *Worker) EnqueueRPCScheduled(
+	routeStr string,
+	metadata map[string]interface{},
+	reply, arg proto.Message, at time.Time,
+) (jid string, err error) {
+	opts := w.enqueueOptionsAt(w.opts, at)
 	return workers.EnqueueWithOptions(rpcQueue, class, &rpcInfo{
 		Route:    routeStr,
 		Metadata: metadata,
@@ -184,6 +200,22 @@ func (w *Worker) enqueueOptions(
 	}
 }
 
+func (w *Worker) enqueueOptionsAt(
+	opts *EnqueueOpts, at time.Time,
+) workers.EnqueueOptions {
+	return workers.EnqueueOptions{
+		Retry:    opts.RetryEnabled,
+		RetryMax: opts.MaxRetries,
+		At:       timeToSecondsWithNanoPrecision(at),
+		RetryOptions: workers.RetryOptions{
+			Exp:      opts.ExponentialFactor,
+			MinDelay: opts.MinDelayToRetry,
+			MaxDelay: opts.MaxDelayToRetry,
+			MaxRand:  opts.MaxRandom,
+		},
+	}
+}
+
 func (w *Worker) unmarshalRouteMetadata(
 	jobArg *workers.Msg,
 ) ([]byte, *rpcRoute, error) {
@@ -199,4 +231,8 @@ func (w *Worker) unmarshalRouteMetadata(
 	}
 
 	return bts, rpcRoute, nil
+}
+
+func timeToSecondsWithNanoPrecision(t time.Time) float64 {
+	return float64(t.UnixNano()) / workers.NanoSecondPrecision
 }

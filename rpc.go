@@ -25,6 +25,7 @@ import (
 	"github.com/topfreegames/pitaya/cluster"
 	"github.com/topfreegames/pitaya/logger"
 	"reflect"
+	"time"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/topfreegames/pitaya/constants"
@@ -88,6 +89,16 @@ func ReliableRPC(
 	reply, arg proto.Message,
 ) (jid string, err error) {
 	return app.worker.EnqueueRPC(routeStr, metadata, reply, arg)
+}
+
+// ReliableRPCScheduled enqueues Scheduled RPC to worker so it's executed asynchronously
+// Default enqueue options are used
+func ReliableRPCScheduled(
+	routeStr string,
+	metadata map[string]interface{},
+	reply, arg proto.Message, at time.Time,
+) (jid string, err error) {
+	return app.worker.EnqueueRPCScheduled(routeStr, metadata, reply, arg, at)
 }
 
 // ReliableRPCWithOptions enqueues RPC to worker
