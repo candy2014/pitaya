@@ -135,6 +135,21 @@ func SetDictionary(dict map[string]uint16) error {
 	return nil
 }
 
+// DelDictionary del routes map which be used to compress route.
+func DelDictionary(route string) error {
+	if route == "" {
+		return nil
+	}
+	routesCodesMutex.Lock()
+	defer routesCodesMutex.Unlock()
+	route = strings.TrimSpace(route)
+	if code, ok := routes[route]; ok {
+		delete(routes, route)
+		delete(codes, code)
+	}
+	return nil
+}
+
 // GetDictionary gets the routes map which is used to compress route.
 func GetDictionary() map[string]uint16 {
 	routesCodesMutex.RLock()

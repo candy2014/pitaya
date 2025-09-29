@@ -494,9 +494,9 @@ func listen() {
 
 // SetDictionary sets routes map
 func SetDictionary(dict map[string]uint16) error {
-	if app.running {
-		return constants.ErrChangeDictionaryWhileRunning
-	}
+	//if app.running {
+	//	return constants.ErrChangeDictionaryWhileRunning
+	//}
 	return message.SetDictionary(dict)
 }
 
