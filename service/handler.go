@@ -317,6 +317,10 @@ func (h *HandlerService) processMessage(a *agent.Agent, msg *message.Message) {
 	}
 	thread := rand.Int63n(h.dispatchThreadNum)
 
+	if r.Service == "event" {
+		thread = a.Session.ID() % h.dispatchThreadNum
+	}
+
 	if r.SvType == h.server.Type {
 		h.chLocalProcess[thread] <- message
 	} else {
