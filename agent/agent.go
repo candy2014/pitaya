@@ -79,6 +79,7 @@ type (
 		metricsReporters   []metrics.Reporter
 		serializer         serialize.Serializer // message serializer
 		state              int32                // current agent state
+		kickSend           chan pendingWrite    // kick message queue
 	}
 
 	pendingMessage struct {
@@ -132,6 +133,7 @@ func NewAgent(
 		state:              constants.StatusStart,
 		messageEncoder:     messageEncoder,
 		metricsReporters:   metricsReporters,
+		kickSend:           make(chan pendingWrite, 3),
 	}
 
 	// binding session
@@ -314,7 +316,8 @@ func (a *Agent) Kick(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	_, err = a.conn.Write(p)
+	//_, err = a.conn.Write(p)
+	a.kickSend <- pendingWrite{data: p}
 	return err
 }
 
@@ -468,6 +471,11 @@ func (a *Agent) write() {
 			var e error
 			tracing.FinishSpan(pWrite.ctx, e)
 			metrics.ReportTimingFromCtx(pWrite.ctx, a.metricsReporters, handlerType, pWrite.err)
+		case kWrite := <-a.kickSend:
+			if _, err := a.conn.Write(kWrite.data); err != nil {
+				logger.Log.Errorf("Failed to kick write in conn: %s", err.Error())
+			}
+			return
 		case <-a.chStopWrite:
 			return
 		}

@@ -339,7 +339,8 @@ func (s *Session) Kick(ctx context.Context) error {
 	if err := s.entity.Kick(ctx); err != nil {
 		logger.Log.Errorf("kick session is error %s ", err.Error())
 	}
-	return s.entity.Close()
+	//return s.entity.Close()
+	return nil
 }
 
 // OnClose adds the function it receives to the callbacks that will be called
