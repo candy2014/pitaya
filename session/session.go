@@ -92,6 +92,7 @@ type Session struct {
 	frontendID        string                 // the id of the frontend that owns the session
 	frontendSessionID int64                  // the id of the session on the frontend server
 	Subscriptions     []*nats.Subscription   // subscription created on bind when using nats rpc server
+	bind              bool                   //current session is bind
 }
 
 type sessionIDService struct {
@@ -250,6 +251,11 @@ func (s *Session) UID() string {
 	return s.uid
 }
 
+// SetUID set uid
+func (s *Session) SetUID(uid string) {
+	s.uid = uid
+}
+
 // GetData gets the data
 func (s *Session) GetData() map[string]interface{} {
 	s.RLock()
@@ -297,11 +303,13 @@ func (s *Session) Bind(ctx context.Context, uid string) error {
 		return constants.ErrIllegalUID
 	}
 
-	if s.UID() != "" {
+	if s.UID() != "" && s.bind {
 		return constants.ErrSessionAlreadyBound
 	}
 
 	s.uid = uid
+	s.bind = true
+
 	for _, cb := range sessionBindCallbacks {
 		err := cb(ctx, s)
 		if err != nil {
