@@ -79,7 +79,7 @@ type (
 		metricsReporters   []metrics.Reporter
 		serializer         serialize.Serializer // message serializer
 		state              int32                // current agent state
-		kickSend           chan pendingWrite    // kick message queue
+		otherSend          chan pendingWrite    // kick message queue
 	}
 
 	pendingMessage struct {
@@ -133,7 +133,7 @@ func NewAgent(
 		state:              constants.StatusStart,
 		messageEncoder:     messageEncoder,
 		metricsReporters:   metricsReporters,
-		kickSend:           make(chan pendingWrite, 3),
+		otherSend:          make(chan pendingWrite, 3),
 	}
 
 	// binding session
@@ -317,7 +317,7 @@ func (a *Agent) Kick(ctx context.Context) error {
 		return err
 	}
 	//_, err = a.conn.Write(p)
-	a.kickSend <- pendingWrite{data: p}
+	a.otherSend <- pendingWrite{data: p}
 	return err
 }
 
@@ -447,7 +447,8 @@ func (a *Agent) SendHandshakeResponse() error {
 	if data, err = a.encoder.Encode(packet.Handshake, data); err != nil {
 		panic(err)
 	}
-	_, err = a.conn.Write(data)
+	a.otherSend <- pendingWrite{data: data}
+	//_, err = a.conn.Write(data)
 	//_, err := a.conn.Write(hrd)
 	return err
 }
@@ -471,7 +472,7 @@ func (a *Agent) write() {
 			var e error
 			tracing.FinishSpan(pWrite.ctx, e)
 			metrics.ReportTimingFromCtx(pWrite.ctx, a.metricsReporters, handlerType, pWrite.err)
-		case kWrite := <-a.kickSend:
+		case kWrite := <-a.otherSend:
 			if _, err := a.conn.Write(kWrite.data); err != nil {
 				logger.Log.Errorf("Failed to kick write in conn: %s", err.Error())
 			}
