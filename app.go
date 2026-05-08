@@ -425,10 +425,8 @@ func Start() {
 		app.router,
 		app.config.GetInt("pitaya.concurrency.handler.dispatch"),
 	)
-
-	periodicMetrics()
-
 	listen()
+	periodicMetrics()
 
 	defer func() {
 		timer.GlobalTicker.Stop()
