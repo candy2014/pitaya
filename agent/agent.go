@@ -80,6 +80,7 @@ type (
 		serializer         serialize.Serializer // message serializer
 		state              int32                // current agent state
 		kickSend           chan pendingWrite    // kick message queue
+		kicking            int32                // CAS guard: 0=idle, 1=kick already enqueued/closed
 	}
 
 	pendingMessage struct {
@@ -307,6 +308,13 @@ func (a *Agent) GetStatus() int32 {
 
 // Kick sends a kick packet to a client
 func (a *Agent) Kick(ctx context.Context) error {
+	// Idempotent: only the first Kick on a session enqueues the packet. This
+	// guards against duplicate-login logic (unique_session) firing Kick several
+	// times on the same old session, which would otherwise pile up on kickSend
+	// after write() has already exited.
+	if !atomic.CompareAndSwapInt32(&a.kicking, 0, 1) {
+		return nil
+	}
 	// packet encode
 	var data []byte
 	if value := pcontext.GetFromPropagateCtx(ctx, "repeat"); value != nil {
@@ -314,11 +322,24 @@ func (a *Agent) Kick(ctx context.Context) error {
 	}
 	p, err := a.encoder.Encode(packet.Kick, data)
 	if err != nil {
+		// roll the guard back so a later, legitimate kick can still try
+		atomic.StoreInt32(&a.kicking, 0)
 		return err
 	}
-	//_, err = a.conn.Write(p)
-	a.kickSend <- pendingWrite{data: p}
-	return err
+	// Non-blocking send: the kickSend buffer is small (cap 3) and its only
+	// consumer (write()) exits after draining a single kick, so once the agent
+	// is closing, kickSend is never drained again. A plain blocking send would
+	// wedge the caller forever and pile up on the channel until it reports full.
+	// Drop the kick instead of blocking when the agent is already dying or the
+	// buffer is full — a closing/kicked client does not need the packet anyway.
+	select {
+	case a.kickSend <- pendingWrite{data: p}:
+	case <-a.chDie:
+		logger.Log.Debugf("Kick dropped, agent already dying, UID=%s", a.Session.UID())
+	default:
+		logger.Log.Infof("kickSend full, dropping kick for UID=%s", a.Session.UID())
+	}
+	return nil
 }
 
 // SetLastAt sets the last at to now
@@ -459,6 +480,18 @@ func (a *Agent) write() {
 		a.Close()
 	}()
 
+	// Bound each write to the connection's liveness window. The heartbeat
+	// mechanism already drops a client that fails to respond within
+	// 2*heartbeatTimeout, so waiting longer than one heartbeat interval for a
+	// single write is pointless — an unresponsive client is doomed anyway.
+	// Fall back to a fixed default when heartbeats are disabled (timeout == 0),
+	// otherwise we would set a zero/now deadline and reintroduce unbounded blocking.
+	writeTimeout := a.heartbeatTimeout
+
+	if writeTimeout == 0 {
+		writeTimeout = time.Second * 5
+	}
+
 	for {
 		select {
 		case pWrite := <-a.chSend:
@@ -473,6 +506,10 @@ func (a *Agent) write() {
 			tracing.FinishSpan(pWrite.ctx, e)
 			metrics.ReportTimingFromCtx(pWrite.ctx, a.metricsReporters, handlerType, pWrite.err)
 		case kWrite := <-a.kickSend:
+			if err := a.conn.SetWriteDeadline(time.Now().Add(writeTimeout)); err != nil {
+				logger.Log.Errorf("Failed to set write deadline: %s", err.Error())
+				return
+			}
 			if _, err := a.conn.Write(kWrite.data); err != nil {
 				logger.Log.Errorf("Failed to kick write in conn: %s", err.Error())
 			}
